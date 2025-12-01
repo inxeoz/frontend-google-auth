@@ -12,6 +12,10 @@
     let profile: any = null;
     let editing = false;
     let editData: any = {};
+    let changingPhone = false;
+    let newPhone = "";
+    let phoneOtp = "";
+    let phoneStep: "phone" | "otp" = "phone";
 
     let base_url = "http://localhost:8000";
     baseUrl.subscribe((value: string) => (base_url = value));
@@ -122,9 +126,75 @@
         loading = false;
     }
 
+    async function requestPhoneChange(phone: string) {
+        const token = $authToken;
+        if (!token) return;
+        loading = true;
+        error = "";
+        try {
+            const response = await fetch(
+                `${base_url}/api/method/custom_booking.api.devoteee.profile.update_profile`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: token,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ phone }),
+                },
+            );
+            const data = await response.json();
+            if (response.ok) {
+                phoneOtp = data.message;
+                phoneStep = "otp";
+            } else {
+                error = data.message || "Failed to request phone change";
+            }
+        } catch (err) {
+            error = "Network error";
+        }
+        loading = false;
+    }
+
+    async function confirmPhoneChange(phone: string, otp: string) {
+        const token = $authToken;
+        if (!token) return;
+        loading = true;
+        error = "";
+        try {
+            const response = await fetch(
+                `${base_url}/api/method/custom_booking.api.devoteee.profile.update_profile`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: token,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ phone, otp }),
+                },
+            );
+            const data = await response.json();
+            if (response.ok) {
+                profile = data.message;
+                changingPhone = false;
+                phoneStep = "phone";
+                newPhone = "";
+                phoneOtp = "";
+            } else {
+                error = data.message || "Failed to update phone";
+            }
+        } catch (err) {
+            error = "Network error";
+        }
+        loading = false;
+    }
+
     function startEdit() {
         editing = true;
         editData = { ...profile };
+        // Remove phone and companion from editData to prevent updating them here
+        delete editData.phone;
+        delete editData.companion;
     }
 
     function cancelEdit() {
@@ -132,15 +202,32 @@
         editData = {};
     }
 
+    function startChangePhone() {
+        changingPhone = true;
+        newPhone = profile.phone || "";
+        phoneStep = "phone";
+        phoneOtp = "";
+    }
+
+    function cancelChangePhone() {
+        changingPhone = false;
+        newPhone = "";
+        phoneOtp = "";
+        phoneStep = "phone";
+    }
+
     async function handleGoogleCredentialResponse(response: any) {
         loading = true;
         error = "";
         try {
-            const res = await fetch(`${base_url}/api/method/custom_booking.api.devoteee.login.google_login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ token: response.credential }),
-            });
+            const res = await fetch(
+                `${base_url}/api/method/custom_booking.api.devoteee.login.google_login`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: response.credential }),
+                },
+            );
             const data = await res.json();
             if (res.ok) {
                 authToken.set(data.message);
@@ -193,7 +280,7 @@
                 disabled={loading}
                 class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:opacity-50"
             >
-                {loading ? 'Sending...' : 'Send OTP'}
+                {loading ? "Sending..." : "Send OTP"}
             </button>
             <div class="mt-4 text-center">
                 <p class="text-gray-600 mb-2">Or</p>
@@ -233,7 +320,60 @@
     <div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
         <h2 class="text-2xl font-bold mb-4">Profile</h2>
         {#if profile}
-            {#if editing}
+            {#if changingPhone}
+                {#if phoneStep === "phone"}
+                    <div class="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="New Phone Number"
+                            bind:value={newPhone}
+                            class="w-full p-2 border rounded"
+                        />
+                        {#if error}<p class="text-red-500">{error}</p>{/if}
+                        <div class="flex space-x-2">
+                            <button
+                                on:click={() => requestPhoneChange(newPhone)}
+                                disabled={loading || !newPhone}
+                                class="flex-1 bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:opacity-50"
+                            >
+                                {loading ? "Sending..." : "Send OTP"}
+                            </button>
+                            <button
+                                on:click={cancelChangePhone}
+                                class="flex-1 bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                {:else}
+                    <div class="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="OTP"
+                            bind:value={phoneOtp}
+                            class="w-full p-2 border rounded"
+                        />
+                        {#if error}<p class="text-red-500">{error}</p>{/if}
+                        <div class="flex space-x-2">
+                            <button
+                                on:click={() =>
+                                    confirmPhoneChange(newPhone, phoneOtp)}
+                                disabled={loading || !phoneOtp}
+                                class="flex-1 bg-green-500 text-white p-2 rounded hover:bg-green-600 disabled:opacity-50"
+                            >
+                                {loading ? "Updating..." : "Update Phone"}
+                            </button>
+                            <button
+                                on:click={cancelChangePhone}
+                                class="flex-1 bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                {/if}
+            {:else if editing}
                 <form
                     on:submit|preventDefault={() => updateProfile(editData)}
                     class="space-y-4"
@@ -259,7 +399,7 @@
                         <option value="other">Other</option>
                     </select>
                     <input
-                        type="date"
+                        type="text"
                         bind:value={editData.dob}
                         class="w-full p-2 border rounded"
                     />
@@ -295,6 +435,7 @@
             {:else}
                 <p><strong>Name:</strong> {profile.devoteee_name}</p>
                 <p><strong>Email:</strong> {profile.email}</p>
+                <p><strong>Phone:</strong> {profile.phone}</p>
                 <p><strong>Gender:</strong> {profile.gender}</p>
                 <p><strong>DOB:</strong> {profile.dob}</p>
                 <p><strong>Aadhar:</strong> {profile.aadhar}</p>
@@ -302,13 +443,19 @@
                 <div class="flex space-x-2 mt-4">
                     <button
                         on:click={startEdit}
-                        class="flex-1 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                        class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
                     >
                         Edit Profile
                     </button>
                     <button
+                        on:click={startChangePhone}
+                        class="bg-purple-500 text-white p-2 rounded hover:bg-purple-600"
+                    >
+                        Change Phone
+                    </button>
+                    <button
                         on:click={() => authToken.set(null)}
-                        class="flex-1 bg-red-500 text-white p-2 rounded hover:bg-red-600"
+                        class="bg-red-500 text-white p-2 rounded hover:bg-red-600"
                     >
                         Logout
                     </button>
