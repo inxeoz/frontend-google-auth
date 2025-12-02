@@ -1,22 +1,27 @@
 <script lang="ts">
-
     interface Props {
         profile: any;
         baseUrl: string;
         token: string;
         onUpdate: (updatedProfile: any) => void;
         onCancel: () => void;
+        mode: "profile" | "phone";
     }
 
-    let { profile, baseUrl, token, onUpdate, onCancel }: Props = $props();
+    let { profile, baseUrl, token, onUpdate, onCancel, mode }: Props = $props();
 
     let editData = $state({ ...profile });
+    let newPhone = $state(profile.phone || "");
+    let phoneOtp = $state("");
+    let phoneStep = $state<"phone" | "otp">("phone");
     let loading = $state(false);
     let error = $state("");
 
-    // Remove phone and companion from editData
-    delete editData.phone;
-    delete editData.companion;
+    // Remove phone and companion from editData for profile mode
+    if (mode === "profile") {
+        delete editData.phone;
+        delete editData.companion;
+    }
 
     async function updateProfile() {
         if (!token) return;
@@ -45,65 +50,177 @@
         }
         loading = false;
     }
+
+    async function requestPhoneChange() {
+        if (!token) return;
+        loading = true;
+        error = "";
+        try {
+            const response = await fetch(
+                `${baseUrl}/api/method/custom_booking.api.devoteee.profile.update_profile`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: token,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ phone: newPhone }),
+                },
+            );
+            const data = await response.json();
+            if (response.ok) {
+                phoneOtp = data.message;
+                phoneStep = "otp";
+            } else {
+                error = data.message || "Failed to request phone change";
+            }
+        } catch (err) {
+            error = "Network error";
+        }
+        loading = false;
+    }
+
+    async function confirmPhoneChange() {
+        if (!token) return;
+        loading = true;
+        error = "";
+        try {
+            const response = await fetch(
+                `${baseUrl}/api/method/custom_booking.api.devoteee.profile.update_profile`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: token,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ phone: newPhone, otp: phoneOtp }),
+                },
+            );
+            const data = await response.json();
+            if (response.ok) {
+                onUpdate(data.message);
+            } else {
+                error = data.message || "Failed to update phone";
+            }
+        } catch (err) {
+            error = "Network error";
+        }
+        loading = false;
+    }
 </script>
 
-<div class="max-w-md mx-auto mt-10 p-8 bg-gradient-to-br from-yellow-50 to-orange-100 rounded-xl shadow-lg border border-yellow-200">
-    <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Edit Profile</h2>
-    <form onsubmit={updateProfile} class="space-y-4">
-        <input
-            type="text"
-            placeholder="Name"
-            bind:value={editData.devoteee_name}
-            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-        />
-        <input
-            type="email"
-            placeholder="Email"
-            bind:value={editData.email}
-            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-        />
-        <select
-            bind:value={editData.gender}
-            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-        >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-        </select>
-        <input
-            type="text"
-            bind:value={editData.dob}
-            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-            placeholder="Date of Birth"
-        />
-        <input
-            type="text"
-            placeholder="Aadhar"
-            bind:value={editData.aadhar}
-            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-        />
-        <input
-            type="text"
-            placeholder="Location"
-            bind:value={editData.location}
-            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
-        />
-        {#if error}<p class="text-red-500">{error}</p>{/if}
-        <div class="flex space-x-3">
-            <button
-                type="submit"
-                disabled={loading}
-                class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 transition-all font-medium"
+<div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow border">
+    {#if mode === "profile"}
+        <h2 class="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
+        <form onsubmit={updateProfile} class="space-y-4">
+            <input
+                type="text"
+                placeholder="Name"
+                bind:value={editData.devoteee_name}
+                class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+                type="email"
+                placeholder="Email"
+                bind:value={editData.email}
+                class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+                bind:value={editData.gender}
+                class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
             >
-                {loading ? "Updating..." : "Update"}
-            </button>
-            <button
-                type="button"
-                onclick={onCancel}
-                class="flex-1 bg-gray-500 text-white p-3 rounded-lg hover:bg-gray-600 transition-all font-medium"
-            >
-                Cancel
-            </button>
-        </div>
-    </form>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+            </select>
+            <input
+                type="text"
+                bind:value={editData.dob}
+                class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                placeholder="Date of Birth"
+            />
+            <input
+                type="text"
+                placeholder="Aadhar"
+                bind:value={editData.aadhar}
+                class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+                type="text"
+                placeholder="Location"
+                bind:value={editData.location}
+                class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+            />
+            {#if error}<p class="text-red-500">{error}</p>{/if}
+            <div class="flex space-x-3">
+                <button
+                    type="submit"
+                    disabled={loading}
+                    class="flex-1 bg-blue-500 text-white p-3 rounded hover:bg-blue-600 disabled:opacity-50"
+                >
+                    {loading ? "Updating..." : "Update"}
+                </button>
+                <button
+                    type="button"
+                    onclick={onCancel}
+                    class="flex-1 bg-gray-500 text-white p-3 rounded hover:bg-gray-600"
+                >
+                    Cancel
+                </button>
+            </div>
+        </form>
+    {:else}
+        <h2 class="text-2xl font-bold mb-6 text-center">Change Phone</h2>
+        {#if phoneStep === "phone"}
+            <div class="space-y-4">
+                <input
+                    type="text"
+                    placeholder="New Phone Number"
+                    bind:value={newPhone}
+                    class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+                {#if error}<p class="text-red-500">{error}</p>{/if}
+                <div class="flex space-x-3">
+                    <button
+                        onclick={requestPhoneChange}
+                        disabled={loading || !newPhone}
+                        class="flex-1 bg-blue-500 text-white p-3 rounded hover:bg-blue-600 disabled:opacity-50"
+                    >
+                        {loading ? "Sending..." : "Send OTP"}
+                    </button>
+                    <button
+                        onclick={onCancel}
+                        class="flex-1 bg-gray-500 text-white p-3 rounded hover:bg-gray-600"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        {:else}
+            <div class="space-y-4">
+                <input
+                    type="text"
+                    placeholder="OTP"
+                    bind:value={phoneOtp}
+                    class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-500"
+                />
+                {#if error}<p class="text-red-500">{error}</p>{/if}
+                <div class="flex space-x-3">
+                    <button
+                        onclick={confirmPhoneChange}
+                        disabled={loading || !phoneOtp}
+                        class="flex-1 bg-blue-500 text-white p-3 rounded hover:bg-blue-600 disabled:opacity-50"
+                    >
+                        {loading ? "Updating..." : "Update Phone"}
+                    </button>
+                    <button
+                        onclick={onCancel}
+                        class="flex-1 bg-gray-500 text-white p-3 rounded hover:bg-gray-600"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        {/if}
+    {/if}
 </div>

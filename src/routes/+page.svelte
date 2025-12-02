@@ -4,14 +4,12 @@
     import LoginForm from "$lib/components/LoginForm.svelte";
     import ProfileView from "$lib/components/ProfileView.svelte";
     import ProfileEdit from "$lib/components/ProfileEdit.svelte";
-    import PhoneChange from "$lib/components/PhoneChange.svelte";
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     let error = $state("");
     let profile: any = $state(null);
-    let editing = $state(false);
-    let changingPhone = $state(false);
+    let editMode: "profile" | "phone" | null = $state(null);
 
     let base_url = $state("http://localhost:8000");
     baseUrl.subscribe((value: string) => (base_url = value));
@@ -47,24 +45,19 @@
 
     function handleProfileUpdate(updatedProfile: any) {
         profile = updatedProfile;
-        editing = false;
-        changingPhone = false;
+        editMode = null;
     }
 
     function startEdit() {
-        editing = true;
-    }
-
-    function cancelEdit() {
-        editing = false;
+        editMode = "profile";
     }
 
     function startChangePhone() {
-        changingPhone = true;
+        editMode = "phone";
     }
 
-    function cancelChangePhone() {
-        changingPhone = false;
+    function cancelEdit() {
+        editMode = null;
     }
 
     onMount(() => {
@@ -74,31 +67,24 @@
     });
 </script>
 
-{#if !$authToken}
-    <LoginForm {clientId} baseUrl={base_url} onLoginSuccess={handleLoginSuccess} />
-{:else}
-    {#if changingPhone}
-        <PhoneChange
-            {profile}
-            baseUrl={base_url}
-            token={$authToken}
-            onUpdate={handleProfileUpdate}
-            onCancel={cancelChangePhone}
-        />
-    {:else if editing}
-        <ProfileEdit
-            {profile}
-            baseUrl={base_url}
-            token={$authToken}
-            onUpdate={handleProfileUpdate}
-            onCancel={cancelEdit}
-        />
+    {#if !$authToken}
+        <LoginForm {clientId} baseUrl={base_url} onLoginSuccess={handleLoginSuccess} />
     {:else}
-        <ProfileView
-            {profile}
-            {error}
-            onEditProfile={startEdit}
-            onChangePhone={startChangePhone}
-        />
+        {#if editMode}
+            <ProfileEdit
+                {profile}
+                baseUrl={base_url}
+                token={$authToken}
+                mode={editMode}
+                onUpdate={handleProfileUpdate}
+                onCancel={cancelEdit}
+            />
+        {:else}
+            <ProfileView
+                {profile}
+                {error}
+                onEditProfile={startEdit}
+                onChangePhone={startChangePhone}
+            />
+        {/if}
     {/if}
-{/if}
