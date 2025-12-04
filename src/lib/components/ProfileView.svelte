@@ -6,9 +6,10 @@
         error: string;
         onEditProfile: () => void;
         onChangePhone: () => void;
+        onChangeEmail: () => void;
     }
 
-    let { profile, error, onEditProfile, onChangePhone }: Props = $props();
+    let { profile, error, onEditProfile, onChangePhone, onChangeEmail }: Props = $props();
 </script>
 
 <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow border">
@@ -35,6 +36,12 @@
                 class="bg-purple-500 text-white p-3 rounded hover:bg-purple-600"
             >
                 Change Phone
+            </button>
+            <button
+                onclick={onChangeEmail}
+                class="bg-green-500 text-white p-3 rounded hover:bg-green-600"
+            >
+                Change Email
             </button>
             <button
                 onclick={() => authToken.set(null)}

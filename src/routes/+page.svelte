@@ -9,7 +9,7 @@
 
     let error = $state("");
     let profile: any = $state(null);
-    let editMode: "profile" | "phone" | null = $state(null);
+    let editMode: "profile" | "phone" | "email" | null = $state(null);
 
     let base_url = $state("http://localhost:8000");
     baseUrl.subscribe((value: string) => (base_url = value));
@@ -56,6 +56,10 @@
         editMode = "phone";
     }
 
+    function startChangeEmail() {
+        editMode = "email";
+    }
+
     function cancelEdit() {
         editMode = null;
     }
@@ -85,6 +89,7 @@
                 {error}
                 onEditProfile={startEdit}
                 onChangePhone={startChangePhone}
+                onChangeEmail={startChangeEmail}
             />
         {/if}
     {/if}
