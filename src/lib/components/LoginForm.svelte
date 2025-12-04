@@ -109,6 +109,7 @@
             );
         }
     });
+
 </script>
 
     {#if step === "phone"}
@@ -125,14 +126,15 @@
                 onclick={sendOtp}
                 disabled={loading}
                 class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 disabled:opacity-50"
-            >
-                {loading ? "Sending..." : "Send OTP"}
-            </button>
-            <div class="mt-6 text-center">
-                <p class="mb-3">Or continue with</p>
-                <div id="google-btn" class="flex justify-center"></div>
-            </div>
-        </div>
+             >
+                 {loading ? "Sending..." : "Send OTP"}
+             </button>
+             <div class="mt-6 text-center">
+                 <p class="mb-3">Or continue with</p>
+                 <div id="google-btn" class="flex justify-center"></div>
+             </div>
+
+         </div>
     {:else}
         <div class="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow border">
             <h2 class="text-2xl font-bold mb-6 text-center">Verify OTP</h2>
